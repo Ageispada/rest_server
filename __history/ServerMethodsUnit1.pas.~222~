@@ -1,0 +1,657 @@
+unit ServerMethodsUnit1;
+
+interface
+
+uses System.SysUtils, System.Classes, System.Json,
+    Datasnap.DSServer, Datasnap.DSAuth, DataSnap.DSProviderDataModuleAdapter,
+  FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Error, FireDAC.UI.Intf,
+  FireDAC.Phys.Intf, FireDAC.Stan.Def, FireDAC.Stan.Pool, FireDAC.Stan.Async,
+  FireDAC.Phys, Data.DB, FireDAC.Comp.Client, FireDAC.Phys.FB,
+  FireDAC.Phys.FBDef, FireDAC.VCLUI.Wait, FireDAC.Stan.Param, FireDAC.DatS,
+  FireDAC.DApt.Intf, FireDAC.DApt, FireDAC.Comp.DataSet, FireDAC.Comp.UI,
+  Datasnap.Provider, inifiles;
+
+type
+{$METHODINFO ON}
+  TServerMethods1 = class(TDataModule)
+    FDGUIxWaitCursor1: TFDGUIxWaitCursor;
+    FDQuery1: TFDQuery;
+    FDConnection1: TFDConnection;
+    FDQuery2: TFDQuery;
+    DataSetProvider1: TDataSetProvider;
+    FDQuery3: TFDQuery;
+    FDQuery4: TFDQuery;
+    TB_LOC: TFDTable;
+    procedure DataModuleCreate(Sender: TObject);
+    procedure TB_LOCPostError(DataSet: TDataSet; E: EDatabaseError;
+      var Action: TDataAction);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+    function EchoString(Value: string): string;
+    function ReverseString(Value: string): string;
+    function Listarmesas(usuario: string; clave: string): String ;
+    function Listargrupos(usuario: string; clave: string): String ;
+    function Listarcomandas(usuario: string; clave: string; mesa: string): String ;
+    function Listaritems(usuario: string; clave: string; grupo: string; buscar: string): String ;
+    function Listarclientes(usuario: string; clave: string; rif: string; buscar: string): String ;
+    function Listardatos(usuario: string; clave: string; mesa: string): String ;
+    function Cargardatos(usuario: string; clave: string; mesa: string; identificacion: string; nombre: string; telefono: string; direccion: string): String ;
+    function Cargarcomandas(usuario: string; clave: string; mesa: string; vcodigo: string; vcantidad: string; vdescripcion : string): String ;
+    function Cargarcuenta(usuario: string; clave: string; mesa: string): String ;
+    function Login(usuario: string; clave : string): boolean;
+    procedure lock (n: smallint);
+    procedure unlock (n: smallint);
+    procedure Cargarmesa(mesa: string; usuario: string);
+  end;
+{$METHODINFO OFF}
+
+var
+  wt : smallint;
+
+implementation
+
+
+{$R *.dfm}
+
+uses System.StrUtils;
+
+function TServerMethods1.Cargarcomandas(usuario, clave, mesa, vcodigo,
+  vcantidad , vdescripcion: string): String;
+var
+  codigo , cantidad , descripcion : String;
+  comanda , nombre , por , pvp , costo , Respuesta: String;
+  tot  ,  cos : Double;
+  ser : smallint;
+begin
+  Cargarmesa(mesa ,  usuario);
+  FDQuery1.SQL.Clear;
+  FDQuery1.SQL.Add('SELECT COM_COD FROM TB_COM WHERE COM_MES = :MESA');
+  FDQuery1.Params.ParamByName('MESA').Value := mesa;
+  FDQuery1.Active := True;
+  comanda := FDQuery1['COM_COD'];
+  Respuesta := 'No cargado';
+  FDQuery1.Close;
+  while (length(vcodigo) > 0) do
+  begin
+    codigo:= '';
+    cantidad := '';
+    descripcion := '';
+    if (vcodigo[1] = '<')   then
+    begin
+      vcodigo := RightStr(vcodigo,(length(vcodigo) - 1));
+    end
+    else
+    begin
+      while (length(vcodigo) > 0) and (vcodigo[1] <> '<') do
+      begin
+        codigo := codigo + vcodigo[1];
+        vcodigo := RightStr(vcodigo,(length(vcodigo) - 1));
+      end;
+    end;
+    if (vcantidad[1] = '<')   then
+    begin
+      vcantidad := RightStr(vcantidad,(length(vcantidad) - 1));
+    end
+    else
+    begin
+      while (length(vcantidad) > 0) and (vcantidad[1] <> '<') do
+      begin
+        cantidad := cantidad + vcantidad[1];
+        vcantidad := RightStr(vcantidad,(length(vcantidad) - 1));
+      end;
+    end;
+    if (vdescripcion[1] = '<')   then
+    begin
+      vdescripcion := RightStr(vdescripcion,(length(vdescripcion) - 1));
+    end
+    else
+    begin
+      while (length(vdescripcion) > 0) and (vdescripcion[1] <> '<') do
+      begin
+        descripcion := descripcion + vdescripcion[1];
+        vdescripcion := RightStr(vdescripcion,(length(vdescripcion) - 1));
+      end;
+    end;
+
+    if (length(codigo) > 0) and (length(cantidad) > 0) then
+    begin
+      FDQuery1.SQL.Clear;
+      FDQuery1.SQL.Add('SELECT * FROM TB_ITE WHERE ITE_COD = :ITEM');
+      FDQuery1.Params.ParamByName('ITEM').Value := codigo;
+      FDQuery1.Active := True;
+      nombre :=  FDQuery1['ITE_NOM'];
+      por :=  FDQuery1['ITE_POR'];
+      pvp :=  FDQuery1['ITE_PVP'];
+      costo :=  FDQuery1['ITE_COS'];
+      FDQuery1.Close;
+
+      ser := 1;
+      lock (2);
+      FDQuery1.SQL.Clear;
+      FDQuery1.SQL.Add('SELECT NUM_COL FROM TB_NUM WHERE NUM_FEC = :FECHA');
+      FDQuery1.Params.ParamByName('FECHA').Value := date();
+      FDQuery1.Active := True;
+      if not FDQuery1.Eof then
+      begin
+        ser :=  FDQuery1['NUM_COL'] + 1;
+        FDQuery2.SQL.Clear;
+        FDQuery2.SQL.Add('UPDATE TB_NUM SET NUM_COL = NUM_COL + 1 WHERE NUM_FEC = :FECHA');
+        FDQuery2.Params.ParamByName('FECHA').Value := date();
+        FDQuery2.ExecSQL;
+      end
+      else
+      begin
+        FDQuery2.SQL.Clear;
+        FDQuery2.SQL.Add('INSERT INTO TB_NUM (NUM_FEC, NUM_COL) VALUES (:FECHA, 1)');
+        FDQuery2.Params.ParamByName('FECHA').Value := date();
+        FDQuery2.ExecSQL;
+      end;
+      FDQuery1.Close;
+      unlock (2);
+
+      FDQuery4.Params.ParamByName('COL_COM').Value := comanda;
+      FDQuery4.Params.ParamByName('COL_HOR').Value := formatdatetime('hh:mm AM/PM', now);
+      FDQuery4.Params.ParamByName('COL_SER').Value := ser;
+      FDQuery4.Params.ParamByName('COL_ITE').Value := codigo;
+      if (codigo = '000001') or (codigo = '000002') then
+      begin
+        FDQuery4.Params.ParamByName('COL_NOM').Value := descripcion;
+      end
+      else
+      begin
+        FDQuery4.Params.ParamByName('COL_NOM').Value := nombre;
+      end;
+      FDQuery4.Params.ParamByName('COL_POR').Value := por;
+
+      FDQuery4.Params.ParamByName('COL_CAN').Value := cantidad;
+      FDQuery4.Params.ParamByName('COL_PVP').Value := pvp;
+      FDQuery4.Params.ParamByName('COL_COS').Value := '0';
+      FDQuery4.Params.ParamByName('COL_TOT').Value := floattostr(strtofloat(pvp) * strtofloat(cantidad));
+      FDQuery4.ExecSQL;
+      FDQuery4.Close;
+      Respuesta := 'Cargado';
+
+    end;
+  end;
+  if Respuesta = 'Cargado' then
+  begin
+    FDQuery2.SQL.Clear;
+    FDQuery2.SQL.Add('SELECT SUM(col_tot) AS TOT , SUM(col_cos) AS COS FROM tb_col WHERE col_com = :COMANDA');
+    FDQuery2.Params.ParamByName('COMANDA').Value := comanda;
+    FDQuery2.Active := True;
+    tot :=  strtofloat(FDQuery2['TOT']);
+    cos := strtofloat((FDQuery2['COS']));
+    FDQuery2.Close;
+
+    FDQuery2.SQL.Clear;
+    FDQuery2.SQL.Add('UPDATE TB_COM SET COM_SUM = :SUMA , COM_SUB = :SUBTOTAL , COM_SER = :SERVICIO, COM_TOT = :TOTAL , COM_COS = :COSTO WHERE COM_COD = :CODIGO') ;
+    FDQuery2.Params.ParamByName('SUMA').Value := tot;
+    FDQuery2.Params.ParamByName('SUBTOTAL').Value := tot;
+    FDQuery2.Params.ParamByName('SERVICIO').Value := (tot * 0.1);
+
+    FDQuery2.Params.ParamByName('TOTAL').Value := (tot + (tot * 0.1)) ;
+    FDQuery2.Params.ParamByName('COSTO').Value := 0;
+    FDQuery2.Params.ParamByName('CODIGO').Value := comanda;
+    FDQuery2.ExecSQL;
+    FDQuery2.Close;
+  end;
+  Result := Respuesta;
+end;
+
+function TServerMethods1.Cargarcuenta(usuario, clave, mesa: string): String;
+var
+  Respuesta , Codigo :  String;
+begin
+  Respuesta := '';
+  if Login(usuario, clave) then
+  begin
+    FDQuery1.SQL.Clear;
+    FDQuery1.SQL.Add('SELECT com_cod FROM tb_com WHERE com_mes = :MESA') ;
+    FDQuery1.Params.ParamByName('MESA').Value := mesa;
+    FDQuery1.Active := True;
+    if not FDQuery1.Eof then
+    begin
+      Codigo := FDQuery1['com_cod'];
+      FDQuery2.SQL.Clear;
+      FDQuery2.SQL.Add('INSERT INTO TB_QUO (QUO_NUM, QUO_TPO)  VALUES (:CODIGO , :TPO)') ;
+      FDQuery2.Params.ParamByName('CODIGO').Value := Codigo;
+      FDQuery2.Params.ParamByName('TPO').Value := 'K';
+      FDQuery2.ExecSQL;
+      Respuesta := 'Cargado';
+    end;
+    FDQuery1.Close;
+  end;
+  Result := Respuesta;
+end;
+
+function TServerMethods1.Cargardatos(usuario, clave, mesa, identificacion,
+  nombre, telefono, direccion: string): String;
+var
+  Respuesta : String;
+begin
+  if Login(usuario, clave) then
+  begin
+    Cargarmesa(mesa ,  usuario);
+    FDQuery1.SQL.Clear;
+    FDQuery1.SQL.Add('UPDATE TB_COM SET COM_RIF = :IDENTIFICACION , COM_NOM = :NOMBRE , COM_TEL = :TELEFONO, COM_DI1 = :DIRECCION WHERE COM_MES = :MESA') ;
+    FDQuery1.Params.ParamByName('MESA').Value := mesa;
+    FDQuery1.Params.ParamByName('IDENTIFICACION').Value := identificacion;
+    FDQuery1.Params.ParamByName('NOMBRE').Value := nombre;
+    FDQuery1.Params.ParamByName('TELEFONO').Value := telefono;
+    FDQuery1.Params.ParamByName('DIRECCION').Value := direccion;
+    FDQuery1.ExecSQL;
+    FDQuery1.Close;
+    respuesta := 'Insertado';
+  end
+  else
+  begin
+    respuesta := '';
+  end;
+  Result := Respuesta;
+end;
+
+procedure TServerMethods1.Cargarmesa(mesa, usuario: string);
+var
+  codigo : integer;
+begin
+  codigo := 0;
+  FDQuery2.SQL.Clear;
+  FDQuery2.SQL.Add('SELECT COM_COD FROM TB_COM WHERE COM_MES = :MESA') ;
+  FDQuery2.Params.ParamByName('MESA').Value := mesa;
+  FDQuery2.Active := True;
+  if FDQuery2.Eof then
+  begin
+    lock (1);
+    FDQuery1.SQL.Clear;
+    FDQuery1.SQL.Add('SELECT EMP_COM FROM TB_EMP') ;
+    FDQuery1.Active := True;
+    codigo := FDQuery1['EMP_COM'];
+    FDQuery1.Close;
+
+    FDQuery1.SQL.Clear;
+    FDQuery1.SQL.Add('UPDATE TB_EMP SET EMP_COM = EMP_COM + 1') ;
+    FDQuery1.ExecSQL;
+    FDQuery1.Close;
+    unlock (1);
+
+    FDQuery3.Params.ParamByName('COM_COD').Value := inttostr(codigo);
+    FDQuery3.Params.ParamByName('COM_FEC').Value := date();
+    FDQuery3.Params.ParamByName('COM_HOR').Value := formatdatetime('hh:mm AM/PM', now);
+    FDQuery3.Params.ParamByName('COM_MES').Value := mesa;
+    FDQuery3.Params.ParamByName('COM_CAM').Value := usuario;
+    FDQuery3.ExecSQL;
+    FDQuery3.Close;
+  end;
+  FDQuery2.Close;
+end;
+
+procedure TServerMethods1.DataModuleCreate(Sender: TObject);
+var
+  Ini : TIniFile;
+begin
+  Ini := TIniFile.Create(ExtractFilePath(ParamStr(0))+'\host.ini') ;
+  FDConnection1.Params.Values['Server']:= Ini.ReadString('Db' , 'Server' , '');
+  FDConnection1.Params.Values['Database']:= Ini.ReadString('Db' , 'Database' , '');
+  FDConnection1.Connected := True;
+end;
+
+function TServerMethods1.EchoString(Value: string): string;
+begin
+  Result := Value;
+end;
+
+function TServerMethods1.Listarclientes(usuario, clave, rif,
+  buscar: string): String;
+var
+  Respuesta :  String;
+  nombre, cid, direccion1, direccion2, telefono : string;
+begin
+  Respuesta := '';
+  if Login(usuario, clave) then
+  begin
+    FDQuery1.SQL.Clear;
+    if (length(buscar) > 0) and (length(rif) > 0) then
+    begin
+      FDQuery1.SQL.Add('SELECT * FROM TB_CLI WHERE (UPPER(CLI_NOM) LIKE UPPER(:BUSCAR)) OR (UPPER(CLI_RIF) LIKE UPPER(:RIF)) ORDER BY CLI_NOM ASC') ;
+      FDQuery1.Params.ParamByName('BUSCAR').Value := '%'+buscar+'%';
+      FDQuery1.Params.ParamByName('RIF').Value := '%'+rif+'%';
+    end
+    else
+    begin
+      if length(buscar) > 0 then
+      begin
+        FDQuery1.SQL.Add('SELECT * FROM TB_CLI WHERE (UPPER(CLI_NOM) LIKE UPPER(:BUSCAR))  ORDER BY CLI_NOM ASC') ;
+        FDQuery1.Params.ParamByName('BUSCAR').Value := '%'+buscar+'%';
+      end;
+      if length(rif) > 0 then
+      begin
+        FDQuery1.SQL.Add('SELECT * FROM TB_CLI WHERE (UPPER(CLI_RIF) LIKE UPPER(:RIF))  ORDER BY CLI_NOM ASC') ;
+        FDQuery1.Params.ParamByName('RIF').Value := '%'+rif+'%';
+      end;
+      if (length(rif) = 0) and (length(buscar) = 0) then
+      begin
+        FDQuery1.SQL.Add('SELECT * FROM TB_CLI  ORDER BY CLI_NOM ASC') ;
+      end;
+    end;
+    FDQuery1.Active := True;
+    while not FDQuery1.Eof do
+    begin
+        try
+          cid := FDQuery1['CLI_RIF'];
+        except
+          cid := '';
+        end;
+        try
+          nombre := FDQuery1['CLI_NOM'];
+        except
+          nombre := '';
+        end;
+        try
+          telefono := FDQuery1['CLI_TEL'];
+        except
+          telefono := '';
+        end;
+        try
+          direccion1 := FDQuery1['CLI_DI1'];
+        except
+          direccion1 := '';
+        end;
+        try
+          direccion2 := FDQuery1['CLI_DI2'];
+        except
+          direccion2 := '';
+        end;
+      
+      Respuesta := Respuesta + '|,' + cid + '!,' + nombre + '!,' + telefono + '!,' + direccion1+' '+direccion2;
+      FDQuery1.Next;
+    end;
+    Result := Respuesta;
+    FDQuery1.Close;
+  end
+  else
+  begin
+    respuesta := '';
+  end;
+  Result := Respuesta;
+end;
+
+function TServerMethods1.Listarcomandas(usuario, clave, mesa: string): String;
+var
+  Respuesta :  String;
+begin
+  if Login(usuario, clave) then
+  begin
+    FDQuery1.SQL.Clear;
+    FDQuery1.SQL.Add('SELECT tb_col.COL_NOM , tb_col.COL_PVP , tb_col.COL_CAN , tb_col.COL_TOT FROM tb_col, tb_com WHERE ( tb_col.col_ite <> 000001 AND tb_col.col_ite <> 000002) AND tb_com.com_mes = :MESA AND tb_com.com_cod = tb_col.col_com') ;
+    FDQuery1.Params.ParamByName('MESA').Value := mesa;
+    FDQuery1.Active := True;
+    while not FDQuery1.Eof do
+    begin
+      Respuesta := Respuesta + '|' +FDQuery1['COL_NOM'] + '<' + floattostr(strtofloat(FDQuery1['COL_PVP'])) + '<' + floattostr(strtofloat(FDQuery1['COL_CAN'])) + '<' + floattostr(strtofloat(FDQuery1['COL_TOT']));
+      FDQuery1.Next;
+    end;
+    Result := Respuesta;
+    FDQuery1.Close;
+  end
+  else
+  begin
+    respuesta := '';
+  end;
+  Result := Respuesta;
+end;
+
+function TServerMethods1.Listardatos(usuario, clave, mesa: string): String;
+var
+  Respuesta ,  Telefono, Direccion1, Direccion2, Identificacion, Subtotal, Servicio, Total : String;
+  Nombre : WideString;
+begin
+  if Login(usuario, clave) then
+  begin
+    FDQuery1.SQL.Clear;
+    FDQuery1.SQL.Add('SELECT * FROM TB_COM WHERE COM_MES = :MESA') ;
+    FDQuery1.Params.ParamByName('MESA').Value := mesa;
+    FDQuery1.Active := True;
+    if not FDQuery1.Eof then
+    begin
+      try
+        Identificacion := FDQuery1['COM_RIF'];
+      except
+        Identificacion := '';
+      end;
+      try
+        Nombre := FDQuery1['COM_NOM'];
+      except
+        Nombre := '';
+      end;
+      try
+        Telefono := FDQuery1['COM_TEL'];
+      except
+        Telefono := '';
+      end;
+      try
+        Direccion1 := FDQuery1['COM_DI1'];
+      except
+        Direccion1 := '';
+      end;
+      try
+        Direccion2 := FDQuery1['COM_DI2'];
+      except
+        Direccion2 := '';
+      end;
+      try
+        Subtotal := FDQuery1['COM_SUB'];
+      except
+        Subtotal := '';
+      end;
+      try
+        Servicio := FDQuery1['COM_SER'];
+      except
+        Servicio := '';
+      end;
+      try
+        Total := FDQuery1['COM_TOT'];
+      except
+        Total := '';
+      end;
+    end;
+    Respuesta := '|,'+Identificacion+'|,'+nombre+'|,'+telefono+'|,'+direccion1+' '+direccion2+'|,'+subtotal+'|,'+servicio+'|,'+total;
+    Result := Respuesta;
+    FDQuery1.Close;
+  end
+  else
+  begin
+    respuesta := '';
+  end;
+  Result := Respuesta;
+end;
+
+function TServerMethods1.Listargrupos(usuario, clave: string): String;
+var
+  Respuesta :  String;
+  enable : string;
+  nombre, codigo : string;
+begin
+  if Login(usuario, clave) then
+  begin
+    FDQuery1.SQL.Clear;
+    FDQuery1.SQL.Add('SELECT GRU_COD, GRO_NOM FROM tb_gru ORDER BY GRU_COD ASC') ;
+    FDQuery1.Active := True;
+    while not FDQuery1.Eof do
+    begin
+      FDQuery2.SQL.Clear;
+      FDQuery2.SQL.Add('SELECT ITE_COD FROM TB_ITE WHERE ITE_GRU = :GRUPO') ;
+      FDQuery2.Params.ParamByName('GRUPO').Value := FDQuery1['GRU_COD'];
+      FDQuery2.Active := True;
+      if FDQuery2.Eof then
+      begin
+        enable := 'false';
+      end
+      else
+      begin
+        enable := 'true';
+      end;
+      try
+        nombre := FDQuery1['GRO_NOM'];
+      except
+        nombre := '';
+      end;
+      try
+        codigo := FDQuery1['GRU_COD'];
+      except
+        codigo := '';
+      end;
+      Respuesta := Respuesta  + '|,' + codigo  +'<,'+ nombre   +'<,'+ enable;
+      FDQuery1.Next;
+      FDQuery2.Close;
+    end;
+    FDQuery1.Close;
+    Result := Respuesta;
+  end
+  else
+  begin
+    respuesta := '';
+  end;
+  Result := Respuesta;
+end;
+
+function TServerMethods1.Listaritems(usuario, clave, grupo , buscar: string): String;
+var
+  Respuesta :  String;
+  pvp : String ;
+begin
+  if Login(usuario, clave) then
+  begin
+    FDQuery1.SQL.Clear;
+    if buscar <> '' then
+    begin
+      FDQuery1.SQL.Add('SELECT ITE_COD , ITE_NOM , ITE_DES , ITE_PVP FROM TB_ITE WHERE UPPER(ITE_NOM) LIKE UPPER(:BUSCAR) ORDER BY ITE_NOM ASC') ;
+      FDQuery1.Params.ParamByName('BUSCAR').Value := '%'+buscar+'%';
+    end
+    else
+    begin
+      FDQuery1.SQL.Add('SELECT ITE_COD , ITE_NOM , ITE_DES , ITE_PVP FROM TB_ITE WHERE ITE_GRU = :GRUPO ORDER BY ITE_NOM ASC') ;
+      FDQuery1.Params.ParamByName('GRUPO').Value := grupo;
+    end;
+    FDQuery1.Active := True;
+    while not FDQuery1.Eof do
+    begin
+      try
+        pvp := floattostr(strtofloat(FDQuery1['ITE_PVP']));
+      except
+        pvp := '';
+      end;
+      Respuesta := Respuesta + '|,' + FDQuery1['ITE_COD'] + '<,' + FDQuery1['ITE_NOM']+ '<,' + pvp + '<,' + FDQuery1['ITE_DES'] ;
+      FDQuery1.Next;
+    end;
+    Result := Respuesta;
+    FDQuery1.Close;
+  end
+  else
+  begin
+    respuesta := '';
+  end;
+  Result := Respuesta;
+end;
+
+function TServerMethods1.Listarmesas(usuario, clave: string): String;
+var
+  Respuesta :  String;
+begin
+  if Login(usuario, clave) then
+  begin
+    FDQuery1.SQL.Clear;
+    FDQuery1.SQL.Add('SELECT MES_COD FROM tb_mes ORDER BY mes_cod asc') ;
+    FDQuery1.Active := True;
+    while not FDQuery1.Eof do
+    begin
+      Respuesta := Respuesta + ' ' +FDQuery1['MES_COD'];
+      FDQuery2.SQL.Clear;
+      FDQuery2.SQL.Add('SELECT com_cam FROM tb_com WHERE com_mes = :MESA') ;
+      FDQuery2.Params.ParamByName('MESA').Value := FDQuery1['MES_COD'];
+      FDQuery2.Active := True;
+      if  not FDQuery2.Eof then
+      begin
+        Respuesta := Respuesta + '/' +FDQuery2['com_cam'];
+      end
+      else
+      begin
+        Respuesta := Respuesta + '/x';
+      end;
+      FDQuery2.Close;
+      FDQuery1.Next;
+    end;
+    FDQuery1.Close;
+    Result := Respuesta;
+  end
+  else
+  begin
+    respuesta := '';
+  end;
+  Result := Respuesta;
+end;
+
+function TServerMethods1.Login(usuario, clave: string): boolean;
+begin
+  FDQuery1.SQL.Clear;
+  FDQuery1.SQL.Add('SELECT * FROM tb_ope WHERE ope_cod = :CODIGO AND ope_cla = :CLAVE') ;
+  FDQuery1.Params.ParamByName('CODIGO').Value := usuario;
+  FDQuery1.Params.ParamByName('CLAVE').Value := clave;
+  FDQuery1.Active := True;
+  if not FDQuery1.Eof then
+  begin
+    Result := True;
+  end
+  else
+  begin
+    Result := False;
+  end;
+  FDQuery1.Close;
+
+end;
+
+function TServerMethods1.ReverseString(Value: string): string;
+begin
+  Result := System.StrUtils.ReverseString(Value);
+end;
+
+procedure TServerMethods1.TB_LOCPostError(DataSet: TDataSet; E: EDatabaseError;
+  var Action: TDataAction);
+begin
+  sleep (300);
+  if (wt >= 40) then // 12 segundos ...
+    Action := DaAbort
+  else begin
+    wt := wt + 1;
+    Action := DaRetry;
+  end;
+end;
+
+procedure TServerMethods1.lock (n: smallint);
+begin
+  wt := 0;
+  tb_loc.open;
+  tb_loc.insert;
+  tb_loc.fields [0].asinteger := n;
+  try
+    tb_loc.post;
+  except
+    tb_loc.cancel;
+  end;
+  tb_loc.close;
+end;
+
+procedure TServerMethods1.unlock (n: smallint);
+begin
+  tb_loc.open;
+  while (not tb_loc.eof) do
+    if (tb_loc.fields [0].asinteger = n) then
+      tb_loc.delete
+    else
+      tb_loc.next;
+  tb_loc.close;
+end;
+
+end.
+

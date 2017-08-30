@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+	<Transactions>
+    <Transaction>2016/02/13 12:04:42.000.957,=C:\Users\Administrator\Documents\RAD Studio\Projects\Restserver\FormUnit1.pas</Transaction>
+    <Transaction>2016/02/13 12:04:43.000.096,=C:\Users\Administrator\Documents\RAD Studio\Projects\Restserver\ServerMethodsUnit1.pas</Transaction>
+    <Transaction>2016/02/13 12:04:45.000.839,=C:\Users\Administrator\Documents\RAD Studio\Projects\Restserver\WebModuleUnit1.pas</Transaction>
+    <Transaction>2016/02/13 12:04:45.000.978,=C:\Users\Administrator\Documents\RAD Studio\Projects\Restserver\js\json2.js</Transaction>
+    <Transaction>2016/02/13 12:04:45.000.970,=C:\Users\Administrator\Documents\RAD Studio\Projects\Restserver\js\ServerFunctionExecutor.js</Transaction>
+    <Transaction>2016/02/13 12:04:45.000.994,=C:\Users\Administrator\Documents\RAD Studio\Projects\Restserver\js\ServerFunctions.js</Transaction>
+    <Transaction>2016/02/13 12:04:45.000.938,=C:\Users\Administrator\Documents\RAD Studio\Projects\Restserver\js\base64.js</Transaction>
+    <Transaction>2016/02/13 12:04:45.000.985,=C:\Users\Administrator\Documents\RAD Studio\Projects\Restserver\js\CallbackFramework.js</Transaction>
+    <Transaction>2016/02/13 12:04:46.000.001,=C:\Users\Administrator\Documents\RAD Studio\Projects\Restserver\js\base64-min.js</Transaction>
+    <Transaction>2016/02/13 12:04:46.000.045,=C:\Users\Administrator\Documents\RAD Studio\Projects\Restserver\js\ServerFunctionInvoker.js</Transaction>
+    <Transaction>2016/02/13 12:04:46.000.098,=C:\Users\Administrator\Documents\RAD Studio\Projects\Restserver\templates\ServerFunctionInvoker.html</Transaction>
+    <Transaction>2016/02/13 12:04:46.000.017,=C:\Users\Administrator\Documents\RAD Studio\Projects\Restserver\js\ServerFunctionExecutor-min.js</Transaction>
+    <Transaction>2016/02/13 12:04:46.000.010,=C:\Users\Administrator\Documents\RAD Studio\Projects\Restserver\js\json2-min.js</Transaction>
+    <Transaction>2016/02/13 12:04:46.000.025,=C:\Users\Administrator\Documents\RAD Studio\Projects\Restserver\js\CallbackFramework-min.js</Transaction>
+    <Transaction>2016/02/13 12:04:46.000.217,=C:\Users\Administrator\Documents\RAD Studio\Projects\Restserver\images\expand.png</Transaction>
+    <Transaction>2016/02/13 12:04:46.000.068,=C:\Users\Administrator\Documents\RAD Studio\Projects\Restserver\css\ServerFunctionInvoker.css</Transaction>
+    <Transaction>2016/02/13 12:04:46.000.056,=C:\Users\Administrator\Documents\RAD Studio\Projects\Restserver\css\main.css</Transaction>
+    <Transaction>2016/02/13 12:04:46.000.034,=C:\Users\Administrator\Documents\RAD Studio\Projects\Restserver\js\connection.js</Transaction>
+    <Transaction>2016/02/13 12:04:46.000.083,=C:\Users\Administrator\Documents\RAD Studio\Projects\Restserver\templates\ReverseString.html</Transaction>
+    <Transaction>2016/02/13 12:04:46.000.194,=C:\Users\Administrator\Documents\RAD Studio\Projects\Restserver\images\collapse.png</Transaction>
+  </Transactions>
+</BorlandProject>
